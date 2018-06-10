@@ -1,0 +1,84 @@
+--- 
+- 
+  hosts: container-wildfly
+  tasks: 
+    - 
+      name: "Verification presence JDK 8"
+      package: "name=openjdk-8-jdk-headless state=present"
+   
+    -
+      name: "Verification presence unzip"
+      package: "name=unzip state=present"
+
+    -
+      name: "Verification presence package Gtar"
+      package: "name=tar state=present"
+
+    - 
+      name: "Ajoute l'utilisateur Wildfly"
+      user: 
+        comment: "Utilisateur système wildfly"
+        name: wildfly
+        system: true
+    -
+     name: "Création du dossier"
+     file:
+       path: /usr/local/bin/wildfly
+       state: directory
+    -
+      name: "Création de dossier temporaire"
+      file:
+        path: /usr/local/tmp/wildfly
+        state: directory
+    - 
+      name: "Telechargement de l'archive Wildfly"
+      get_url: 
+        dest: /usr/local/tmp/wildfly/wildfly.tar.gz
+        url: http://download.jboss.org/wildfly/11.0.0.Final/wildfly-11.0.0.Final.tar.gz
+    -
+      name: "Decompression de l'archive Wildfly"
+      unarchive: 
+        src: /usr/local/tmp/wildfly/wildfly.tar.gz
+        dest: /usr/local/bin/wildfly
+        copy: no 
+
+    - 
+      file: 
+        dest: /opt/wildfly
+        owner: wildfly
+        src: /usr/local/bin/wildfly/wildfly-11.0.0.Final
+        state: link
+      name: "Creation du lien symbolique"
+    - 
+      file: 
+        mode: 493
+        path: /etc/wildfly
+        state: directory
+      name: "Creation du repertoire etc wildfly"
+    - 
+      copy: 
+        dest: /etc/wildfly/wildfly.conf
+        src: /opt/wildfly/docs/contrib/scripts/systemd/wildfly.conf
+        remote_src: yes
+      name: "Copie de fichier de conf"
+    - 
+      copy: 
+        dest: /etc/systemd/system/wildfly.service
+        src: /opt/wildfly/docs/contrib/scripts/systemd/wildfly.service
+        remote_src: yes
+      name: "Copie de fichier de service"
+    - 
+      copy: 
+        dest: /opt/wildfly/bin/launch.sh
+        mode: 493
+        src: /opt/wildfly/docs/contrib/scripts/systemd/launch.sh
+        remote_src: yes
+      name: "Copie de fichier de bash"
+    -
+      command: systemctl daemon-reload
+      name: "Rechargement des services"
+    -
+      service:
+        name: wildfly
+        enabled: yes
+      name: "Verification de l'etat du service wildfly"
